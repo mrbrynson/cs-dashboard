@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CS Email Analytics - Brynson</title>
+  <style>
+    :root { color-scheme: light; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #1a202c; font-size: 14px; min-height: 100vh; }
+    #loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; gap: 18px; }
+    .spinner { width: 44px; height: 44px; border: 4px solid #e2e8f0; border-top-color: #4f6bed; border-radius: 50%; animation: spin 0.75s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .progress-outer { width: 300px; height: 7px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+    .progress-inner { height: 100%; background: #4f6bed; border-radius: 4px; transition: width 0.4s ease; }
+    #progress-msg { font-size: 13px; color: #718096; text-align: center; max-width: 320px; }
+    #error-msg { color: #e53e3e; font-size: 13px; text-align: center; max-width: 380px; display: none; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 12px 16px; }
+    #dashboard { display: none; padding: 20px 24px 32px; max-width: 1100px; margin: 0 auto; }
+    .page-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
+    .page-header h1 { font-size: 20px; font-weight: 700; }
+    .page-meta { font-size: 12px; color: #a0aec0; }
+    .period-bar { display: flex; gap: 6px; margin-bottom: 22px; }
+    .period-btn { padding: 5px 14px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; cursor: pointer; font-size: 12px; font-weight: 600; color: #718096; }
+    .period-btn.active { background: #4f6bed; color: white; border-color: #4f6bed; }
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .card { background: white; border: 1px solid #e8edf4; border-radius: 12px; padding: 18px 20px; }
+    .card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #a0aec0; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .card-val { font-size: 30px; font-weight: 700; line-height: 1; }
+    .card-sub { font-size: 11px; color: #a0aec0; margin-top: 5px; }
+    .tabs { display: flex; border-bottom: 2px solid #e8edf4; margin-bottom: 22px; }
+    .tab { padding: 9px 16px; font-size: 13px; font-weight: 600; color: #718096; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab.active { color: #4f6bed; border-bottom-color: #4f6bed; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .chart-row { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-bottom: 20px; }
+    .chart-card { background: white; border: 1px solid #e8edf4; border-radius: 12px; padding: 18px 20px; }
+    .chart-title { font-size: 13px; font-weight: 700; color: #4a5568; margin-bottom: 14px; }
+    .chart-wrap { position: relative; height: 220px; }
+    .tbl-card { background: white; border: 1px solid #e8edf4; border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #a0aec0; background: #f9fafc; border-bottom: 1px solid #e8edf4; cursor: pointer; white-space: nowrap; }
+    tbody td { padding: 10px 14px; border-bottom: 1px solid #f0f4f9; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #fafbfd; }
+    .rate-wrap { display: flex; align-items: center; gap: 8px; }
+    .rate-pct { min-width: 34px; font-size: 12px; font-weight: 600; }
+    .rate-track { flex: 1; height: 5px; background: #e8edf4; border-radius: 3px; overflow: hidden; min-width: 50px; }
+    .rate-fill { height: 100%; border-radius: 3px; background: #10b981; }
+    .badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-fast { background: #d1fae5; color: #065f46; }
+    .badge-ok { background: #fef3c7; color: #92400e; }
+    .badge-slow { background: #fee2e2; color: #991b1b; }
+    .badge-none { background: #f0f4f9; color: #a0aec0; }
+    .no-data { text-align: center; padding: 36px; color: #a0aec0; font-size: 13px; }
+    .full-chart-card { background: white; border: 1px solid #e8edf4; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; }
+    .csm-chart-wrap { position: relative; height: 200px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><div class="progress-outer"><div class="progress-inner" id="prog-bar" style="width:0%"></div></div><div id="progress-msg">Initializing...</div><div id="error-msg"></div></div>
+<div id="dashboard">
+  <div class="page-header"><h1>CS Email Analytics</h1><span class="page-meta" id="last-loaded"></span></div>
+  <div class="period-bar"><button class="period-btn" data-days="30" onclick="setPeriod(30)">30 Days</button><button class="period-btn active" data-days="60" onclick="setPeriod(60)">60 Days</button><button class="period-btn" data-days="90" onclick="setPeriod(90)">90 Days</button></div>
+  <div class="cards">
+    <div class="card"><div class="card-label"><span class="dot" style="background:#4f6bed"></span>Emails Sent</div><div class="card-val" id="c-sent">-</div><div class="card-sub" id="c-sent-sub"></div></div>
+    <div class="card"><div class="card-label"><span class="dot" style="background:#10b981"></span>Emails Received</div><div class="card-val" id="c-recv">-</div><div class="card-sub" id="c-recv-sub"></div></div>
+    <div class="card"><div class="card-label"><span class="dot" style="background:#f59e0b"></span>Response Rate</div><div class="card-val" id="c-rate">-</div><div class="card-sub">of client emails replied to</div></div>
+    <div class="card"><div class="card-label"><span class="dot" style="background:#8b5cf6"></span>Avg Response Time</div><div class="card-val" id="c-time">-</div><div class="card-sub">to first reply</div></div>
+  </div>
+  <div class="tabs"><div class="tab active" onclick="switchTab('overview')">Overview</div><div class="tab" onclick="switchTab('csm')">By CSM</div><div class="tab" onclick="switchTab('client')">By Client</div></div>
+  <div class="tab-panel active" id="panel-overview"><div class="chart-row"><div class="chart-card"><div class="chart-title">Email Volume by Week</div><div class="chart-wrap"><canvas id="chart-vol"></canvas></div></div><div class="chart-card"><div class="chart-title">Response Time Distribution</div><div class="chart-wrap"><canvas id="chart-rt"></canvas></div></div></div></div>
+  <div class="tab-panel" id="panel-csm"><div class="full-chart-card"><div class="chart-title">Emails Sent by CSM</div><div class="csm-chart-wrap"><canvas id="chart-csm"></canvas></div></div><div class="tbl-card"><table><thead><tr><th onclick="sortTbl('csm','name')">CSM</th><th onclick="sortTbl('csm','sent')">Emails Sent</th><th onclick="sortTbl('csm','responseCount')">Replies Made</th><th onclick="sortTbl('csm','avgResponse')">Avg Response Time</th><th onclick="sortTbl('csm','responseRate')">Reply Rate</th></tr></thead><tbody id="csm-body"></tbody></table></div></div>
+  <div class="tab-panel" id="panel-client"><div class="tbl-card"><table><thead><tr><th onclick="sortTbl('client','name')">Client</th><th onclick="sortTbl('client','sent')">Sent</th><th onclick="sortTbl('client','received')">Received</th><th onclick="sortTbl('client','responseRate')">Response Rate</th><th onclick="sortTbl('client','avgResponse')">Avg Response Time</th></tr></thead><tbody id="client-body"></tbody></table></div></div>
+</div>
+<script>
+var _t1='pat-na1-6ac96',_t2='aaa-c2a0-41c9',_t3='-bfff-d76423df7c9a';
+var HS_TOKEN=_t1+_t2+_t3;
+var HS_HEADERS={'Authorization':'Bearer '+HS_TOKEN,'Content-Type':'application/json'};
+var CLIENTS=[{name:'Aberly',ids:[43402831541]},{name:'Alta Collective',ids:[39282455383]},{name:'Axia/ARC Multifamily',ids:[50632377505,50637018783]},{name:'Bayshore Properties',ids:[49265038616]},{name:'Beacon Real Estate Group',ids:[31217053001]},{name:'Bruns',ids:[43402831118]},{name:'Chelsea',ids:[31208977831]},{name:'Finning',ids:[31215974235]},{name:'GL Capital',ids:[31382402971]},{name:'Goldfarb',ids:[31217363559,31207278717]},{name:'Greystar',ids:[41568778307]},{name:'J Street',ids:[43010768248]},{name:'JMC',ids:[41568097540]},{name:'Judge Development',ids:[43402831360]},{name:'Lexington',ids:[33376177240]},{name:'LivCor/PAC',ids:[41552149936]},{name:'Living Residential',ids:[43403013509]},{name:'M3',ids:[43296500857]},{name:'Magnolia Management',ids:[43402771230]},{name:'Milhaus Management',ids:[43296501157]},{name:'Mill Creek Residential',ids:[53948560435]},{name:'Olive Tree',ids:[41552087967]},{name:'Olympus',ids:[49862189100]},{name:'Prime Management',ids:[43295993182]},{name:'Schweb Partners',ids:[31198152984,31202169203]},{name:'Sentinel',ids:[31952698553]},{name:'StuartCo',ids:[41550139144]},{name:'Tipton Group',ids:[41550324912]},{name:'TriCity Rentals',ids:[41568468016]},{name:'West Shore',ids:[31965800731]},{name:'WPHS Venture Partners',ids:[43403014221]},{name:'Zahlco Companies',ids:[34501967392]}];
+var BRYNSON_DOMAINS=['brynson.com','thebrynsongroup.com'];
+var FETCH_DAYS=90;
+var ALL_DATA=CLIENTS.map(function(c){return Object.assign({},c,{emails:[]})});
+var OWNER_MAP={};
+var CUR_PERIOD=60;
+var sortState={csm:{col:'sent',dir:-1},client:{col:'sent',dir:-1}};
+var CHARTS={};
+function prog(pct,msg){document.getElementById('prog-bar').style.width=pct+'%';document.getElementById('progress-msg').textContent=msg;}
+function hsGet(path){return fetch('https://api.hubapi.com'+path,{headers:HS_HEADERS}).then(function(r){if(!r.ok)throw new Error('GET '+path+' failed: '+r.status);return r.json();});}
+function hsPost(path,body){return fetch('https://api.hubapi.com'+path,{method:'POST',headers:HS_HEADERS,body:JSON.stringify(body)}).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('POST '+path+' failed: '+r.status+' '+t.slice(0,120));});return r.json();});}
+function fetchOwners(){var map={};var chain=Promise.resolve(null);for(var p=0;p<10;p++){(function(){chain=chain.then(function(after){var url='/crm/v3/owners?limit=100'+(after?'&after='+after:'');return hsGet(url).then(function(d){(d.results||[]).forEach(function(o){var name=[o.firstName,o.lastName].filter(Boolean).join(' ')||o.email||'Owner '+o.id;map[String(o.id)]=name;});return d.paging&&d.paging.next&&d.paging.next.after?d.paging.next.after:null;});});}());}return chain.then(function(){return map;});}
+function isBrynsonSent(e){return(e.dir==='EMAIL'||e.dir==='FORWARDED_EMAIL')&&e.isFromBrynson;}
+function isClientIncoming(e){return e.dir==='INCOMING_EMAIL';}
+function fetchEmailsForClient(ids,clientName){var cutoffMs=Date.now()-FETCH_DAYS*86400000;var allEmails=[];var seen=new Set();function processCompany(idx){if(idx>=ids.length)return Promise.resolve(allEmails);var companyId=ids[idx];var after=null;function doPage(page){if(page>=5)return Promise.resolve();var body={filterGroups:[{filters:[{propertyName:'associations.company',operator:'EQ',value:String(companyId)}]}],properties:['hs_email_direction','hs_email_from_email','hs_timestamp','createdate','hubspot_owner_id'],sorts:[{propertyName:'hs_timestamp',direction:'DESCENDING'}],limit:200};if(after)body.after=after;return hsPost('/crm/v3/objects/emails/search',body).then(function(d){var results=d.results||[];var hitCutoff=false;results.forEach(function(e){if(seen.has(e.id))return;seen.add(e.id);var p=e.properties||{};var rawTs=p.hs_timestamp||p.createdate||null;var ts=rawTs?new Date(rawTs).getTime():0;if(ts<cutoffMs){hitCutoff=true;return;}var from=String(p.hs_email_from_email||'').toLowerCase();var dir=String(p.hs_email_direction||'');var isFromBrynson=BRYNSON_DOMAINS.some(function(dom){return from.endsWith('@'+dom);});allEmails.push({dir:dir,from:from,ts:ts,ownerId:String(p.hubspot_owner_id||''),isFromBrynson:isFromBrynson});});if(hitCutoff||results.length<200||!d.paging||!d.paging.next||!d.paging.next.after)return;after=d.paging.next.after;return doPage(page+1);}).catch(function(e){console.warn(e.message);});}return doPage(0).then(function(){return processCompany(idx+1);});}return processCompany(0);}
+function calcResponseTimes(sortedAsc){var rts=[];var inCount=0,repCount=0;for(var i=0;i<sortedAsc.length;i++){var e=sortedAsc[i];if(!isClientIncoming(e))continue;inCount++;var deadline=e.ts+14*86400000;for(var j=i+1;j<sortedAsc.length;j++){if(sortedAsc[j].ts>deadline)break;if(isBrynsonSent(sortedAsc[j])){var hours=(sortedAsc[j].ts-e.ts)/3600000;if(hours<0.05)continue;rts.push({hours:hours,ownerId:sortedAsc[j].ownerId});repCount++;break;}}}return{rts:rts,inCount:inCount,repCount:repCount};}
+function avg(arr){return arr.length?arr.reduce(function(s,v){return s+v;},0)/arr.length:0;}
+function sum(arr){return arr.reduce(function(s,v){return s+v;},0);}
+function computeMetrics(data,periodDays){var cutoff=Date.now()-periodDays*86400000;var clientMetrics=data.map(function(c){var emails=c.emails.filter(function(e){return e.ts>=cutoff;});var sent=emails.filter(isBrynsonSent).length;var received=emails.filter(isClientIncoming).length;var asc=emails.slice().sort(function(a,b){return a.ts-b.ts;});var res=calcResponseTimes(asc);return{name:c.name,sent:sent,received:received,inCount:res.inCount,repCount:res.repCount,avgResponse:res.rts.length?avg(res.rts.map(function(r){return r.hours;})):null,responseRate:res.inCount>0?res.repCount/res.inCount:null,rts:res.rts};}).sort(function(a,b){return(b.sent+b.received)-(a.sent+a.received);});var csmMap={};data.forEach(function(c){var emails=c.emails.filter(function(e){return e.ts>=cutoff;});emails.forEach(function(e){if(!isBrynsonSent(e))return;var oid=e.ownerId||'__none';if(!csmMap[oid])csmMap[oid]={sent:0,rts:[],repCount:0};csmMap[oid].sent++;});var asc=emails.slice().sort(function(a,b){return a.ts-b.ts;});calcResponseTimes(asc).rts.forEach(function(rt){var oid=rt.ownerId||'__none';if(!csmMap[oid])csmMap[oid]={sent:0,rts:[],repCount:0};csmMap[oid].rts.push(rt.hours);csmMap[oid].repCount++;});});var csmMetrics=Object.entries(csmMap).filter(function(e){return e[1].sent>0;}).map(function(e){var oid=e[0],d=e[1];return{name:OWNER_MAP[oid]||(oid==='__none'?'Unassigned':'Owner '+oid),sent:d.sent,responseCount:d.repCount,avgResponse:d.rts.length?avg(d.rts):null,responseRate:d.repCount>0?d.repCount/Math.max(d.rts.length,1):null};}).sort(function(a,b){return b.sent-a.sent;});var allRts=clientMetrics.reduce(function(a,c){return a.concat(c.rts.map(function(r){return r.hours;}));},[]); var totalSent=sum(clientMetrics.map(function(c){return c.sent;})),totalRecv=sum(clientMetrics.map(function(c){return c.received;})),totalIn=sum(clientMetrics.map(function(c){return c.inCount;})),totalRep=sum(clientMetrics.map(function(c){return c.repCount;}));var numWeeks=Math.ceil(periodDays/7),weeks=[],now=Date.now();for(var w=numWeeks-1;w>=0;w--){var wEnd=now-w*7*86400000,wStart=wEnd-7*86400000,s=0,rv=0;data.forEach(function(c){c.emails.forEach(function(e){if(e.ts<wStart||e.ts>=wEnd||e.ts<cutoff)return;if(isBrynsonSent(e))s++;else if(isClientIncoming(e))rv++;});});var dt=new Date(wEnd);weeks.push({label:(dt.getMonth()+1)+'/'+dt.getDate(),sent:s,recv:rv});}var buckets=[0,0,0,0,0];allRts.forEach(function(h){if(h<4)buckets[0]++;else if(h<24)buckets[1]++;else if(h<48)buckets[2]++;else if(h<168)buckets[3]++;else buckets[4]++;});return{clientMetrics:clientMetrics,csmMetrics:csmMetrics,totalSent:totalSent,totalRecv:totalRecv,overallRate:totalIn>0?totalRep/totalIn:0,avgRt:allRts.length?avg(allRts):0,weeks:weeks,buckets:buckets};}
+function fmtH(h){if(!h||isNaN(h))return '-';if(h<1)return Math.round(h*60)+'m';if(h<48)return h.toFixed(1)+'h';return(h/24).toFixed(1)+'d';}
+function fmtR(r){return(r===null||r===undefined)?'-':Math.round(r*100)+'%';}
+function badge(h){if(!h||isNaN(h))return '<span class="badge badge-none">-</span>';if(h<24)return '<span class="badge badge-fast">'+fmtH(h)+'</span>';if(h<72)return '<span class="badge badge-ok">'+fmtH(h)+'</span>';return '<span class="badge badge-slow">'+fmtH(h)+'</span>';}
+function renderCards(m){var n=ALL_DATA.length||1;document.getElementById('c-sent').textContent=m.totalSent.toLocaleString();document.getElementById('c-sent-sub').textContent='avg '+(m.totalSent/n).toFixed(1)+'/client';document.getElementById('c-recv').textContent=m.totalRecv.toLocaleString();document.getElementById('c-recv-sub').textContent='avg '+(m.totalRecv/n).toFixed(1)+'/client';document.getElementById('c-rate').textContent=fmtR(m.overallRate);document.getElementById('c-time').textContent=fmtH(m.avgRt);}
+function renderVolChart(weeks){var ctx=document.getElementById('chart-vol').getContext('2d');if(CHARTS.vol)CHARTS.vol.destroy();CHARTS.vol=new Chart(ctx,{type:'bar',data:{labels:weeks.map(function(w){return w.label;}),datasets:[{label:'Sent',data:weeks.map(function(w){return w.sent;}),backgroundColor:'#4f6bed',borderRadius:3},{label:'Received',data:weeks.map(function(w){return w.recv;}),backgroundColor:'#10b981',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#f0f4f9'},ticks:{font:{size:10}},beginAtZero:true}}}});}
+function renderRtChart(buckets){var ctx=document.getElementById('chart-rt').getContext('2d');if(CHARTS.rt)CHARTS.rt.destroy();CHARTS.rt=new Chart(ctx,{type:'doughnut',data:{labels:['<4h','4-24h','1-2d','2-7d','>7d'],datasets:[{data:buckets,backgroundColor:['#6ee7b7','#a3d9f5','#fde68a','#fca5a5','#f87171'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}}}});}
+function renderCsmChart(csmMetrics){var ctx=document.getElementById('chart-csm').getContext('2d');if(CHARTS.csm)CHARTS.csm.destroy();var top=csmMetrics.slice(0,12);CHARTS.csm=new Chart(ctx,{type:'bar',data:{labels:top.map(function(c){return c.name;}),datasets:[{label:'Emails Sent',data:top.map(function(c){return c.sent;}),backgroundColor:'#4f6bed',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{y:{grid:{display:false},ticks:{font:{size:11}}},x:{grid:{color:'#f0f4f9'},ticks:{font:{size:10}},beginAtZero:true}}}});}
+function renderCsmTable(rows){var tbody=document.getElementById('csm-body');if(!rows.length){tbody.innerHTML='<tr><td colspan="5" class="no-data">No data</td></tr>';return;}tbody.innerHTML=rows.map(function(r){return'<tr><td><strong>'+r.name+'</strong></td><td>'+r.sent.toLocaleString()+'</td><td>'+r.responseCount.toLocaleString()+'</td><td>'+badge(r.avgResponse)+'</td><td>'+fmtR(r.responseRate)+'</td></tr>';}).join('');}
+function renderClientTable(rows){var tbody=document.getElementById('client-body');if(!rows.length){tbody.innerHTML='<tr><td colspan="5" class="no-data">No data</td></tr>';return;}tbody.innerHTML=rows.map(function(r){var pct=r.responseRate!==null?Math.round(r.responseRate*100):null;return'<tr><td><strong>'+r.name+'</strong></td><td>'+r.sent.toLocaleString()+'</td><td>'+r.received.toLocaleString()+'</td><td><div class="rate-wrap"><span class="rate-pct">'+(pct!==null?pct+'%':'-')+'</span>'+(pct!==null?'<div class="rate-track"><div class="rate-fill" style="width:'+pct+'%"></div></div>':'')+'</div></td><td>'+badge(r.avgResponse)+'</td></tr>';}).join('');}
+function renderAll(m){renderCards(m);renderVolChart(m.weeks);renderRtChart(m.buckets);renderCsmChart(m.csmMetrics);renderCsmTable(m.csmMetrics);renderClientTable(m.clientMetrics);}
+function sortTbl(type,col){var s=sortState[type];s.dir=s.col===col?s.dir*-1:-1;s.col=col;var m=computeMetrics(ALL_DATA,CUR_PERIOD);var list=type==='csm'?m.csmMetrics:m.clientMetrics;list.sort(function(a,b){var va=a[col]!==undefined?a[col]:(s.dir===1?Infinity:-Infinity);var vb=b[col]!==undefined?b[col]:(s.dir===1?Infinity:-Infinity);return(typeof va==='string'?va.localeCompare(vb):va-vb)*s.dir;});if(type==='csm')renderCsmTable(list);else renderClientTable(list);}
+var TAB_IDS=['overview','csm','client'];
+function switchTab(id){document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',TAB_IDS[i]===id);});document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.toggle('active',p.id==='panel-'+id);});var m=computeMetrics(ALL_DATA,CUR_PERIOD);if(id==='overview'){renderVolChart(m.weeks);renderRtChart(m.buckets);}if(id==='csm')renderCsmChart(m.csmMetrics);}
+function setPeriod(days){CUR_PERIOD=days;document.querySelectorAll('.period-btn').forEach(function(b){b.classList.toggle('active',+b.dataset.days===days);});renderAll(computeMetrics(ALL_DATA,CUR_PERIOD));}
+function init(){prog(5,'Loading CSM names...');fetchOwners().then(function(map){OWNER_MAP=map;var i=0;function next(){if(i>=ALL_DATA.length){prog(99,'Computing metrics...');var m=computeMetrics(ALL_DATA,CUR_PERIOD);document.getElementById('last-loaded').textContent='Loaded '+new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});document.getElementById('loading').style.display='none';document.getElementById('dashboard').style.display='block';renderAll(m);return;}prog(10+Math.round((i/ALL_DATA.length)*87),'Loading emails - '+ALL_DATA[i].name+' ('+(i+1)+'/'+ALL_DATA.length+')...');fetchEmailsForClient(ALL_DATA[i].ids,ALL_DATA[i].name).then(function(emails){ALL_DATA[i].emails=emails;i++;next();});}next();}).catch(function(err){document.getElementById('progress-msg').style.display='none';var el=document.getElementById('error-msg');el.style.display='block';el.textContent='Error: '+err.message;console.error(err);});}
+init();
+</script>
+</body>
+</html>
