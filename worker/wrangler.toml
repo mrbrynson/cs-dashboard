@@ -1,0 +1,4 @@
+name = "brynson-hs-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+account_id = "2e7da68e40fba4fa687210c2f037cab5"
