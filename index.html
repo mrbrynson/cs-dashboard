@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CS Email Analytics — Brynson</title>
+  <title>CS Email Analytics - Brynson</title>
   <style>
     :root { color-scheme: light; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -80,7 +80,7 @@
 <div id="loading">
   <div class="spinner"></div>
   <div class="progress-outer"><div class="progress-inner" id="prog-bar" style="width:0%"></div></div>
-  <div id="progress-msg">Initializing…</div>
+  <div id="progress-msg">Initializing...</div>
   <div id="error-msg"></div>
 </div>
 
@@ -97,22 +97,22 @@
   <div class="cards">
     <div class="card">
       <div class="card-label"><span class="dot" style="background:#4f6bed"></span>Emails Sent</div>
-      <div class="card-val" id="c-sent">—</div>
+      <div class="card-val" id="c-sent">--</div>
       <div class="card-sub" id="c-sent-sub"></div>
     </div>
     <div class="card">
       <div class="card-label"><span class="dot" style="background:#10b981"></span>Emails Received</div>
-      <div class="card-val" id="c-recv">—</div>
+      <div class="card-val" id="c-recv">--</div>
       <div class="card-sub" id="c-recv-sub"></div>
     </div>
     <div class="card">
       <div class="card-label"><span class="dot" style="background:#f59e0b"></span>Response Rate</div>
-      <div class="card-val" id="c-rate">—</div>
+      <div class="card-val" id="c-rate">--</div>
       <div class="card-sub">of client emails replied to</div>
     </div>
     <div class="card">
       <div class="card-label"><span class="dot" style="background:#8b5cf6"></span>Avg Response Time</div>
-      <div class="card-val" id="c-time">—</div>
+      <div class="card-val" id="c-time">--</div>
       <div class="card-sub">to first reply</div>
     </div>
   </div>
@@ -168,7 +168,7 @@
 </div>
 
 <script>
-// ── Config ──────────────────────────────────────────────────────────────────
+// -- Config --
 const PROXY_BASE = 'https://brynson-hs-proxy.mreinold.workers.dev';
 const HS_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -188,7 +188,7 @@ const CLIENTS = [
   { name: 'JMC',                      ids: [41568097540] },
   { name: 'Judge Development',        ids: [43402831360] },
   { name: 'Lexington',                ids: [33376177240] },
-  { name: 'LivCor/PAC',              ids: [41552149936] },
+  { name: 'LivCor/PAC',               ids: [41552149936] },
   { name: 'Living Residential',       ids: [43403013509] },
   { name: 'M3',                       ids: [43296500857] },
   { name: 'Magnolia Management',      ids: [43402771230] },
@@ -216,13 +216,13 @@ let CUR_PERIOD = 60;
 let sortState = { csm: { col: 'sent', dir: -1 }, client: { col: 'sent', dir: -1 } };
 let CHARTS = {};
 
-// ── Progress ─────────────────────────────────────────────────────────────────
+// -- Progress --
 function prog(pct, msg) {
   document.getElementById('prog-bar').style.width = pct + '%';
   document.getElementById('progress-msg').textContent = msg;
 }
 
-// ── HubSpot API helpers ───────────────────────────────────────────────────────
+// -- HubSpot API helpers --
 async function hsGet(path) {
   const r = await fetch(PROXY_BASE + path, { headers: HS_HEADERS });
   if (!r.ok) throw new Error('HubSpot GET ' + path + ' failed: ' + r.status);
@@ -240,7 +240,7 @@ async function hsPost(path, body) {
   return r.json();
 }
 
-// ── Fetch owners ──────────────────────────────────────────────────────────────
+// -- Fetch owners --
 async function fetchOwners() {
   const map = {};
   let after = null;
@@ -257,7 +257,7 @@ async function fetchOwners() {
   return map;
 }
 
-// ── Fetch emails for one client ───────────────────────────────────────────────
+// -- Fetch emails for one client --
 async function fetchEmailsForClient(ids, clientName) {
   const cutoffMs = Date.now() - FETCH_DAYS * 86400000;
   const allEmails = [];
@@ -265,7 +265,7 @@ async function fetchEmailsForClient(ids, clientName) {
 
   for (const companyId of ids) {
     let after = null;
-    for (let page = 0; page < 5; page++) {  // up to 1000 emails per company
+    for (let page = 0; page < 5; page++) {
       const body = {
         filterGroups: [{
           filters: [{
@@ -312,11 +312,11 @@ async function fetchEmailsForClient(ids, clientName) {
   return allEmails;
 }
 
-// ── Email classifiers ─────────────────────────────────────────────────────────
+// -- Email classifiers --
 function isBrynsonSent(e) { return (e.dir === 'EMAIL' || e.dir === 'FORWARDED_EMAIL') && e.isFromBrynson; }
 function isClientIncoming(e) { return e.dir === 'INCOMING_EMAIL'; }
 
-// ── Response time calc ────────────────────────────────────────────────────────
+// -- Response time calc --
 function calcResponseTimes(sortedAsc) {
   const rts = [];
   let inCount = 0, repCount = 0;
@@ -339,7 +339,7 @@ function calcResponseTimes(sortedAsc) {
   return { rts, inCount, repCount };
 }
 
-// ── Metrics ───────────────────────────────────────────────────────────────────
+// -- Metrics --
 function computeMetrics(data, periodDays) {
   const cutoff = Date.now() - periodDays * 86400000;
 
@@ -403,7 +403,7 @@ function computeMetrics(data, periodDays) {
       }
     }
     const d = new Date(wEnd);
-    weeks.push({ label: `${d.getMonth()+1}/${d.getDate()}`, sent: s, recv: rv });
+    weeks.push({ label: (d.getMonth()+1) + '/' + d.getDate(), sent: s, recv: rv });
   }
 
   const buckets = [0, 0, 0, 0, 0];
@@ -423,28 +423,28 @@ function computeMetrics(data, periodDays) {
 function avg(arr) { return arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0; }
 function sum(arr) { return arr.reduce((s, v) => s + v, 0); }
 
-// ── Formatters ────────────────────────────────────────────────────────────────
+// -- Formatters --
 function fmtH(h) {
-  if (!h || isNaN(h)) return '—';
+  if (!h || isNaN(h)) return '--';
   if (h < 1) return Math.round(h * 60) + 'm';
   if (h < 48) return h.toFixed(1) + 'h';
   return (h / 24).toFixed(1) + 'd';
 }
-function fmtR(r) { return (r === null || r === undefined) ? '—' : Math.round(r * 100) + '%'; }
+function fmtR(r) { return (r === null || r === undefined) ? '--' : Math.round(r * 100) + '%'; }
 function badge(h) {
-  if (!h || isNaN(h)) return `<span class="badge badge-none">—</span>`;
-  if (h < 24) return `<span class="badge badge-fast">${fmtH(h)}</span>`;
-  if (h < 72) return `<span class="badge badge-ok">${fmtH(h)}</span>`;
-  return `<span class="badge badge-slow">${fmtH(h)}</span>`;
+  if (!h || isNaN(h)) return '<span class="badge badge-none">--</span>';
+  if (h < 24) return '<span class="badge badge-fast">' + fmtH(h) + '</span>';
+  if (h < 72) return '<span class="badge badge-ok">' + fmtH(h) + '</span>';
+  return '<span class="badge badge-slow">' + fmtH(h) + '</span>';
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
+// -- Render --
 function renderCards(m) {
   const n = ALL_DATA.length || 1;
   document.getElementById('c-sent').textContent = m.totalSent.toLocaleString();
-  document.getElementById('c-sent-sub').textContent = `avg ${(m.totalSent/n).toFixed(1)}/client`;
+  document.getElementById('c-sent-sub').textContent = 'avg ' + (m.totalSent/n).toFixed(1) + '/client';
   document.getElementById('c-recv').textContent = m.totalRecv.toLocaleString();
-  document.getElementById('c-recv-sub').textContent = `avg ${(m.totalRecv/n).toFixed(1)}/client`;
+  document.getElementById('c-recv-sub').textContent = 'avg ' + (m.totalRecv/n).toFixed(1) + '/client';
   document.getElementById('c-rate').textContent = fmtR(m.overallRate);
   document.getElementById('c-time').textContent = fmtH(m.avgRt);
 }
@@ -461,7 +461,7 @@ function renderVolChart(weeks) {
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } } },
       scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-                    y: { grid: { color: '#f0f4f9' }, ticks: { font: { size: 10 } }, beginAtZero: true } } }
+                y: { grid: { color: '#f0f4f9' }, ticks: { font: { size: 10 } }, beginAtZero: true } } }
   });
 }
 
@@ -470,7 +470,7 @@ function renderRtChart(buckets) {
   if (CHARTS.rt) CHARTS.rt.destroy();
   CHARTS.rt = new Chart(ctx, {
     type: 'doughnut',
-    data: { labels: ['< 4h', '4–24h', '1–2d', '2–7d', '> 7d'],
+    data: { labels: ['< 4h', '4-24h', '1-2d', '2-7d', '> 7d'],
       datasets: [{ data: buckets, backgroundColor: ['#6ee7b7','#a3d9f5','#fde68a','#fca5a5','#f87171'], borderWidth: 2, borderColor: '#fff' }]},
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
@@ -487,17 +487,14 @@ function renderCsmChart(csmMetrics) {
     options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: { y: { grid: { display: false }, ticks: { font: { size: 11 } } },
-                 x: { grid: { color: '#f0f4f9' }, ticks: { font: { size: 10 } }, beginAtZero: true } } }
+                x: { grid: { color: '#f0f4f9' }, ticks: { font: { size: 10 } }, beginAtZero: true } } }
   });
 }
 
 function renderCsmTable(rows) {
   const tbody = document.getElementById('csm-body');
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="no-data">No data for this period</td></tr>'; return; }
-  tbody.innerHTML = rows.map(r => `<tr>
-    <td><strong>${r.name}</strong></td><td>${r.sent.toLocaleString()}</td><td>${r.responseCount.toLocaleString()}</td>
-    <td>${badge(r.avgResponse)}</td><td>${fmtR(r.responseRate)}</td>
-  </tr>`).join('');
+  tbody.innerHTML = rows.map(r => '<tr><td><strong>' + r.name + '</strong></td><td>' + r.sent.toLocaleString() + '</td><td>' + r.responseCount.toLocaleString() + '</td><td>' + badge(r.avgResponse) + '</td><td>' + fmtR(r.responseRate) + '</td></tr>').join('');
 }
 
 function renderClientTable(rows) {
@@ -505,13 +502,7 @@ function renderClientTable(rows) {
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="no-data">No data for this period</td></tr>'; return; }
   tbody.innerHTML = rows.map(r => {
     const pct = r.responseRate !== null ? Math.round(r.responseRate * 100) : null;
-    return `<tr>
-      <td><strong>${r.name}</strong></td><td>${r.sent.toLocaleString()}</td><td>${r.received.toLocaleString()}</td>
-      <td><div class="rate-wrap"><span class="rate-pct">${pct !== null ? pct+'%' : '✔'}</span>
-        ${pct !== null ? `<div class="rate-track"><div class="rate-fill" style="width:${pct}%"></div></div>` : ''}
-      </div></td>
-      <td>${badge(r.avgResponse)}</td>
-    </tr>`;
+    return '<tr><td><strong>' + r.name + '</strong></td><td>' + r.sent.toLocaleString() + '</td><td>' + r.received.toLocaleString() + '</td><td><div class="rate-wrap"><span class="rate-pct">' + (pct !== null ? pct + '%' : 'N/A') + '</span>' + (pct !== null ? '<div class="rate-track"><div class="rate-fill" style="width:' + pct + '%"></div></div>' : '') + '</div></td><td>' + badge(r.avgResponse) + '</td></tr>';
   }).join('');
 }
 
@@ -520,7 +511,7 @@ function renderAll(m) {
   renderCsmChart(m.csmMetrics); renderCsmTable(m.csmMetrics); renderClientTable(m.clientMetrics);
 }
 
-// ── Sorting & tabs ────────────────────────────────────────────────────────────
+// -- Sorting & tabs --
 function sortTbl(type, col) {
   const s = sortState[type];
   s.dir = s.col === col ? s.dir * -1 : -1;
@@ -550,18 +541,18 @@ function setPeriod(days) {
   renderAll(computeMetrics(ALL_DATA, CUR_PERIOD));
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// -- Init --
 async function init() {
   try {
-    prog(5, 'Loading CSM names…')�
+    prog(5, 'Loading CSM names...');
     OWNER_MAP = await fetchOwners();
 
     for (let i = 0; i < ALL_DATA.length; i++) {
-      prog(10 + Math.round((i / ALL_DATA.length) * 87), `Loading emails — ${ALL_DATA[i].name} (${i+1}/${ALL_DATA.length})…* );
+      prog(10 + Math.round((i / ALL_DATA.length) * 87), 'Loading emails - ' + ALL_DATA[i].name + ' (' + (i+1) + '/' + ALL_DATA.length + ')...');
       ALL_DATA[i].emails = await fetchEmailsForClient(ALL_DATA[i].ids, ALL_DATA[i].name);
     }
 
-    prog(99, 'Computing metrics…');
+    prog(99, 'Computing metrics...');
     const m = computeMetrics(ALL_DATA, CUR_PERIOD);
     document.getElementById('last-loaded').textContent =
       'Loaded ' + new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
